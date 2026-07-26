@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Compilador — Lenguaje Propio</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ===== Encabezado ===== -->
+  <header>
+    <div class="eyebrow">Proyecto Final · IS913 Diseño de Compiladores</div>
+    <h1>Compila-Es</h1>
+  </header>
+
+  <!-- ===== Barra visual de las 5 etapas ===== -->
+  <div class="pipeline" id="pipeline">
+    <div class="stage" data-stage="lexico"><span class="n">01</span><span class="t">Léxico</span><div class="dot"></div></div>
+    <div class="connector"></div>
+    <div class="stage" data-stage="sintactico"><span class="n">02</span><span class="t">Sintáctico</span><div class="dot"></div></div>
+    <div class="connector"></div>
+    <div class="stage" data-stage="simbolos"><span class="n">03</span><span class="t">Tabla de símbolos</span><div class="dot"></div></div>
+    <div class="connector"></div>
+    <div class="stage" data-stage="tipos"><span class="n">04</span><span class="t">Tipos</span><div class="dot"></div></div>
+    <div class="connector"></div>
+    <div class="stage" data-stage="resultado"><span class="n">05</span><span class="t">Resultado</span><div class="dot"></div></div>
+  </div>
+
+  <div class="grid">
+    <!-- ===== Columna izquierda: entrada de código ===== -->
+    <div class="panel">
+      <div class="panel-head">
+        <span class="label">ENTRADA</span>
+        <div class="tabs">
+          <button class="tab-btn active" id="tab-write">Escribir / pegar</button>
+          <button class="tab-btn" id="tab-file">Subir .txt</button>
+        </div>
+      </div>
+      <div class="editor-body">
+        <!-- Editor con números de línea: la columna .line-numbers se
+             actualiza con JS cada vez que el texto cambia -->
+        <div class="code-editor" id="code-editor">
+          <div class="line-numbers" id="line-numbers">1</div>
+          <textarea id="code" spellcheck="false" placeholder="entero edad = 20;
+decimal promedio = 85.5;
+
+si (edad > 18) {
+    imprimir(&quot;Mayor de edad&quot;);
+} fin_si"></textarea>
+        </div>
+
+        <div class="file-drop hidden" id="filedrop">
+          <div id="drop-label">Arrastra un archivo .txt aquí, o haz clic para elegirlo</div>
+          <span class="filename" id="filename"></span>
+          <input type="file" id="fileinput" accept=".txt">
+        </div>
+      </div>
+      <div class="actions">
+        <button id="run">▶ Compilar</button>
+        <button id="clear">Limpiar</button>
+      </div>
+    </div>
+
+    <!-- ===== Columna derecha: resultados ===== -->
+    <div class="results-col">
+      <div class="panel">
+        <div class="panel-head">
+          <span class="label">TOKENS ENCONTRADOS</span>
+          <span class="token-count" id="token-count"></span>
+        </div>
+        <div class="result-body" id="tokens-body"><div class="empty">Aún no se ha compilado nada.</div></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><span class="label">TABLA DE SÍMBOLOS</span></div>
+        <div class="result-body" id="symbols-body"><div class="empty">Aún no se ha compilado nada.</div></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><span class="label">SALIDA DEL PROGRAMA</span></div>
+        <div class="result-body" id="output-body"><div class="empty">Aún no se ha compilado nada.</div></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><span class="label">RESULTADO</span></div>
+        <div class="result-body" id="result-body"><div class="empty">Presiona "Compilar" para ver el resultado.</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// Referencias a todos los elementos del DOM que vamos a usar
+// ============================================================
+const els = {
+  code: document.getElementById('code'),
+  lineNumbers: document.getElementById('line-numbers'),
+  run: document.getElementById('run'),
+  clear: document.getElementById('clear'),
+  tokenCount: document.getElementById('token-count'),
+  tokensBody: document.getElementById('tokens-body'),
+  symbolsBody: document.getElementById('symbols-body'),
+  outputBody: document.getElementById('output-body'),
+  resultBody: document.getElementById('result-body'),
+  tabWrite: document.getElementById('tab-write'),
+  tabFile: document.getElementById('tab-file'),
+  filedrop: document.getElementById('filedrop'),
+  fileinput: document.getElementById('fileinput'),
+  filename: document.getElementById('filename'),
+  droplabel: document.getElementById('drop-label'),
+};
+
+// ---------- Pestañas "Escribir/pegar" vs "Subir .txt" ----------
+els.tabWrite.addEventListener('click', () => {
+  els.tabWrite.classList.add('active'); els.tabFile.classList.remove('active');
+  document.getElementById('code-editor').classList.remove('hidden');
+  els.filedrop.classList.add('hidden');
+});
+els.tabFile.addEventListener('click', () => {
+  els.tabFile.classList.add('active'); els.tabWrite.classList.remove('active');
+  document.getElementById('code-editor').classList.add('hidden');
+  els.filedrop.classList.remove('hidden');
+});
+
+// ---------- Arrastrar/soltar o seleccionar archivo .txt ----------
+els.filedrop.addEventListener('click', () => els.fileinput.click());
+els.filedrop.addEventListener('dragover', e => { e.preventDefault(); els.filedrop.classList.add('drag'); });
+els.filedrop.addEventListener('dragleave', () => els.filedrop.classList.remove('drag'));
+els.filedrop.addEventListener('drop', e => {
+  e.preventDefault(); els.filedrop.classList.remove('drag');
+  const f = e.dataTransfer.files[0];
+  if(f) readFile(f);
+});
+els.fileinput.addEventListener('change', e => {
+  const f = e.target.files[0];
+  if(f) readFile(f);
+});
+function readFile(f){
+  els.filename.textContent = f.name;
+  els.droplabel.textContent = 'Archivo cargado. Presiona "Compilar".';
+  const reader = new FileReader();
+  reader.onload = ev => { els.code.value = ev.target.result; updateLineNumbers(); };
+  reader.readAsText(f);
+}
+
+// ---------- Números de línea ----------
+// Cada vez que el usuario escribe, contamos cuántas líneas hay
+// y regeneramos la columna de números (1, 2, 3...)
+function updateLineNumbers(){
+  const totalLineas = els.code.value.split('\n').length;
+  let numeros = '';
+  for(let i = 1; i <= totalLineas; i++){ numeros += i + '\n'; }
+  els.lineNumbers.textContent = numeros;
+}
+els.code.addEventListener('input', updateLineNumbers);
+// Cuando el usuario hace scroll dentro del textarea, movemos igual
+// la columna de números para que sigan alineados
+els.code.addEventListener('scroll', () => {
+  els.lineNumbers.scrollTop = els.code.scrollTop;
+});
+updateLineNumbers(); // se ejecuta una vez al cargar la página
+
+// ---------- Botón "Limpiar" ----------
+els.clear.addEventListener('click', () => {
+  els.code.value = '';
+  updateLineNumbers();
+  resetPipeline();
+  els.tokenCount.textContent = '';
+  els.tokensBody.innerHTML = '<div class="empty">Aún no se ha compilado nada.</div>';
+  els.symbolsBody.innerHTML = '<div class="empty">Aún no se ha compilado nada.</div>';
+  els.outputBody.innerHTML = '<div class="empty">Aún no se ha compilado nada.</div>';
+  els.resultBody.innerHTML = '<div class="empty">Presiona "Compilar" para ver el resultado.</div>';
+});
+
+// ---------- Barra de etapas ----------
+function resetPipeline(){
+  document.querySelectorAll('.stage').forEach(s => s.classList.remove('active','error'));
+}
+function markStage(name, state){
+  const el = document.querySelector(`.stage[data-stage="${name}"]`);
+  if(el) el.classList.add(state);
+}
+
+// ---------- Pintar los datos que devuelve /compilar ----------
+
+// Tabla de tokens + contador total
+function renderTokens(tokens, total){
+  els.tokenCount.textContent = total > 0 ? `Total: ${total}` : '';
+  if(!tokens || tokens.length === 0){
+    els.tokensBody.innerHTML = '<div class="empty">No se encontraron tokens.</div>';
+    return;
+  }
+  let html = '<table><tr><th>Lexema</th><th>Token</th><th>Línea</th></tr>';
+  for(const t of tokens){
+    html += `<tr><td>${escapeHtml(t.lexema)}</td><td><span class="tok-badge">${escapeHtml(t.type)}</span></td><td>${t.line}</td></tr>`;
+  }
+  html += '</table>';
+  els.tokensBody.innerHTML = html;
+}
+
+// Tabla de símbolos, con las columnas nuevas: categoría, valor inicial, ¿se modifica?
+function renderSymbols(table){
+  if(!table || table.length === 0){
+    els.symbolsBody.innerHTML = '<div class="empty">No se declararon variables.</div>';
+    return;
+  }
+  let html = '<table><tr><th>Nombre</th><th>Tipo</th><th>Categoría</th><th>Valor inicial</th><th>¿Se modifica?</th></tr>';
+  for(const s of table){
+    html += `<tr>
+      <td>${escapeHtml(s.nombre)}</td>
+      <td>${escapeHtml(s.tipo)}</td>
+      <td>${escapeHtml(s.categoria)}</td>
+      <td>${escapeHtml(String(s.valor_inicial))}</td>
+      <td>${escapeHtml(s.modificado)}</td>
+    </tr>`;
+  }
+  html += '</table>';
+  els.symbolsBody.innerHTML = html;
+}
+
+// Salida real del programa (lo que "imprimió" cada imprimir(...))
+function renderOutput(salida){
+  if(!salida || salida.length === 0){
+    els.outputBody.innerHTML = '<div class="empty">El programa no generó salida.</div>';
+    return;
+  }
+  let html = '';
+  for(const s of salida){
+    html += `<div class="output-line">${escapeHtml(s.texto)}</div>`;
+  }
+  els.outputBody.innerHTML = html;
+}
+
+// Resultado final: éxito o lista de errores
+function renderResult(lexErrors, semErrors, sintaxisValida){
+  const all = [...lexErrors, ...semErrors];
+  if(all.length === 0 && sintaxisValida){
+    els.resultBody.innerHTML = `<div class="status-line ok">✔ Compilación exitosa — sin errores léxicos, sintácticos ni semánticos.</div>`;
+    return;
+  }
+  let html = `<div class="status-line bad">✖ Compilación con errores (${all.length})</div>`;
+  for(const e of all){
+    html += `<div class="err-item"><b>Línea ${e.line}:</b> ${escapeHtml(e.msg)}</div>`;
+  }
+  if(!sintaxisValida && all.length === 0){
+    html += `<div class="err-item">Error sintáctico detuvo el análisis.</div>`;
+  }
+  els.resultBody.innerHTML = html;
+}
+
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
+
+// ============================================================
+// Función principal: se ejecuta al presionar "Compilar"
+// ============================================================
+async function compile(){
+  const source = els.code.value;
+  resetPipeline();
+  els.run.disabled = true;
+
+  try{
+    await sleep(100);
+    markStage('lexico','active');
+
+    const resp = await fetch('/compilar', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({codigo: source})
+    });
+    const data = await resp.json();
+
+    renderTokens(data.tokens, data.total_tokens);
+    if(data.lex_errors.length) markStage('lexico','error');
+
+    await sleep(150);
+    markStage('sintactico','active');
+    if(!data.sintaxis_valida) markStage('sintactico','error');
+
+    await sleep(120);
+    markStage('simbolos','active');
+    renderSymbols(data.symbol_table);
+
+    await sleep(120);
+    markStage('tipos', data.sem_errors.length ? 'error' : 'active');
+    renderOutput(data.salida);
+
+    await sleep(150);
+    const ok = data.lex_errors.length === 0 && data.sem_errors.length === 0 && data.sintaxis_valida;
+    markStage('resultado', ok ? 'active' : 'error');
+    renderResult(data.lex_errors, data.sem_errors, data.sintaxis_valida);
+  } catch(err){
+    els.resultBody.innerHTML = `<div class="err-item">Error de conexión con el servidor Flask: ${escapeHtml(err.message)}</div>`;
+  } finally {
+    els.run.disabled = false;
+  }
+}
+
+els.run.addEventListener('click', compile);
+</script>
+</body>
+</html>
