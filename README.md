@@ -75,23 +75,3 @@ imprimir(nombre);
 | `ejemplos/ejemplo_error_sintactico.txt` | Error sintáctico (`entero edad = ;`) |
 | `ejemplos/ejemplo_error_semantico.txt` | Error semántico de tipos (`entero edad = "hola";`) |
 
-## Guía rápida para la defensa
-
-Según los criterios de evaluación del proyecto, hay que poder explicar:
-
-- **Cómo identifiqué cada token** → función `tokenize()` en `compilador.py`,
-  recorre el código carácter por carácter y clasifica cada uno (número,
-  palabra reservada, identificador, operador, delimitador, cadena).
-- **Cómo valido la gramática** → `parse_and_analyze()`, un parser recursivo
-  descendente: cada regla de la gramática (declaración, condicional,
-  impresión, expresión) es una función que llama a las siguientes.
-- **Dónde guardo las variables** → `scope_stack`, una pila de diccionarios
-  (nombre → tipo); cada bloque `{ }` agrega un nuevo diccionario y lo
-  elimina al cerrar, así las variables respetan su ámbito.
-- **Cómo comparo tipos** → función `combine_types()`, valida que las
-  operaciones (`+`, `-`, comparaciones, etc.) se hagan entre tipos
-  compatibles, y `declaracion()` valida que el valor asignado coincida
-  con el tipo declarado.
-- **Cómo detecto errores** → cada etapa (léxica, sintáctica, semántica)
-  acumula sus propios errores en una lista con número de línea, y se
-  muestran todos juntos en el resultado final.
