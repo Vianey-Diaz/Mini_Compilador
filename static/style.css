@@ -88,7 +88,6 @@ h1{
 .panel-head .label{
   font-family:'JetBrains Mono', monospace; font-size: 12px; color: var(--muted); letter-spacing: .5px;
 }
-/* Texto pequeño con el total de tokens, al lado del título del panel */
 .token-count{
   font-family:'JetBrains Mono', monospace; font-size: 12px; color: var(--teal);
 }
@@ -104,7 +103,6 @@ h1{
 /* ---------- Editor de código con números de línea ---------- */
 .editor-body{ padding: 14px; }
 
-/* Contenedor que envuelve la columna de números + el textarea */
 .code-editor{
   display:flex;
   height: 320px;
@@ -115,7 +113,6 @@ h1{
 }
 .code-editor:focus-within{ border-color: var(--teal); }
 
-/* Columna de números de línea (1, 2, 3...) */
 .line-numbers{
   padding: 12px 10px;
   text-align: right;
@@ -123,9 +120,9 @@ h1{
   font-family:'JetBrains Mono', monospace;
   font-size: 13.5px;
   line-height: 1.6;
-  white-space: pre;      /* respeta los saltos de línea tal cual */
-  user-select: none;     /* que no se puedan seleccionar/copiar los números */
-  overflow: hidden;      /* el scroll real lo controla el textarea */
+  white-space: pre;
+  user-select: none;
+  overflow: hidden;
   border-right: 1px solid var(--line);
   background: #0a0c14;
 }
@@ -133,13 +130,19 @@ h1{
 textarea#code{
   flex: 1;
   height: 100%;
-  resize: none;                 /* ya no se agranda a mano, el contenedor mide 320px fijo */
+  resize: none;
   background: transparent;
   color: var(--text);
   border: none;
   outline: none;
   font-family:'JetBrains Mono', monospace; font-size: 13.5px; line-height: 1.6;
   padding: 12px;
+  /* Evita que el navegador "envuelva" las líneas largas — así cada línea
+     real del código ocupa siempre exactamente una fila visual, y los
+     números de línea nunca se desalinean del texto. Si una línea es muy
+     larga, aparece scroll horizontal en vez de partirse. */
+  white-space: pre;
+  overflow-x: auto;
 }
 
 .file-drop{
@@ -181,14 +184,12 @@ tr:last-child td{ border-bottom:none; }
 }
 .empty{ color: var(--muted); font-size:13px; padding: 6px 8px; }
 
-/* ---------- Panel de salida del programa (lo que imprime 'imprimir') ---------- */
 .output-line{
   font-family:'JetBrains Mono', monospace; font-size: 13px; color: var(--text);
   padding: 6px 2px; border-bottom: 1px solid #1e2233;
 }
 .output-line:last-child{ border-bottom:none; }
 
-/* ---------- Resultado final (éxito / error) ---------- */
 .status-line{
   display:flex; align-items:center; gap:8px; padding: 12px 16px;
   font-family:'JetBrains Mono', monospace; font-size:13px;

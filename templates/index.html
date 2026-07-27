@@ -8,13 +8,11 @@
 <body>
 <div class="wrap">
 
-  <!-- ===== Encabezado ===== -->
   <header>
     <div class="eyebrow">Proyecto Final · IS913 Diseño de Compiladores</div>
     <h1>Compila-Es</h1>
   </header>
 
-  <!-- ===== Barra visual de las 5 etapas ===== -->
   <div class="pipeline" id="pipeline">
     <div class="stage" data-stage="lexico"><span class="n">01</span><span class="t">Léxico</span><div class="dot"></div></div>
     <div class="connector"></div>
@@ -28,7 +26,6 @@
   </div>
 
   <div class="grid">
-    <!-- ===== Columna izquierda: entrada de código ===== -->
     <div class="panel">
       <div class="panel-head">
         <span class="label">ENTRADA</span>
@@ -38,11 +35,9 @@
         </div>
       </div>
       <div class="editor-body">
-        <!-- Editor con números de línea: la columna .line-numbers se
-             actualiza con JS cada vez que el texto cambia -->
         <div class="code-editor" id="code-editor">
           <div class="line-numbers" id="line-numbers">1</div>
-          <textarea id="code" spellcheck="false" placeholder="entero edad = 20;
+          <textarea id="code" wrap="off" spellcheck="false" placeholder="entero edad = 20;
 decimal promedio = 85.5;
 
 si (edad > 18) {
@@ -62,7 +57,6 @@ si (edad > 18) {
       </div>
     </div>
 
-    <!-- ===== Columna derecha: resultados ===== -->
     <div class="results-col">
       <div class="panel">
         <div class="panel-head">
@@ -88,9 +82,6 @@ si (edad > 18) {
 </div>
 
 <script>
-// ============================================================
-// Referencias a todos los elementos del DOM que vamos a usar
-// ============================================================
 const els = {
   code: document.getElementById('code'),
   lineNumbers: document.getElementById('line-numbers'),
@@ -109,7 +100,6 @@ const els = {
   droplabel: document.getElementById('drop-label'),
 };
 
-// ---------- Pestañas "Escribir/pegar" vs "Subir .txt" ----------
 els.tabWrite.addEventListener('click', () => {
   els.tabWrite.classList.add('active'); els.tabFile.classList.remove('active');
   document.getElementById('code-editor').classList.remove('hidden');
@@ -121,7 +111,6 @@ els.tabFile.addEventListener('click', () => {
   els.filedrop.classList.remove('hidden');
 });
 
-// ---------- Arrastrar/soltar o seleccionar archivo .txt ----------
 els.filedrop.addEventListener('click', () => els.fileinput.click());
 els.filedrop.addEventListener('dragover', e => { e.preventDefault(); els.filedrop.classList.add('drag'); });
 els.filedrop.addEventListener('dragleave', () => els.filedrop.classList.remove('drag'));
@@ -142,9 +131,6 @@ function readFile(f){
   reader.readAsText(f);
 }
 
-// ---------- Números de línea ----------
-// Cada vez que el usuario escribe, contamos cuántas líneas hay
-// y regeneramos la columna de números (1, 2, 3...)
 function updateLineNumbers(){
   const totalLineas = els.code.value.split('\n').length;
   let numeros = '';
@@ -152,14 +138,11 @@ function updateLineNumbers(){
   els.lineNumbers.textContent = numeros;
 }
 els.code.addEventListener('input', updateLineNumbers);
-// Cuando el usuario hace scroll dentro del textarea, movemos igual
-// la columna de números para que sigan alineados
 els.code.addEventListener('scroll', () => {
   els.lineNumbers.scrollTop = els.code.scrollTop;
 });
-updateLineNumbers(); // se ejecuta una vez al cargar la página
+updateLineNumbers();
 
-// ---------- Botón "Limpiar" ----------
 els.clear.addEventListener('click', () => {
   els.code.value = '';
   updateLineNumbers();
@@ -171,7 +154,6 @@ els.clear.addEventListener('click', () => {
   els.resultBody.innerHTML = '<div class="empty">Presiona "Compilar" para ver el resultado.</div>';
 });
 
-// ---------- Barra de etapas ----------
 function resetPipeline(){
   document.querySelectorAll('.stage').forEach(s => s.classList.remove('active','error'));
 }
@@ -180,9 +162,6 @@ function markStage(name, state){
   if(el) el.classList.add(state);
 }
 
-// ---------- Pintar los datos que devuelve /compilar ----------
-
-// Tabla de tokens + contador total
 function renderTokens(tokens, total){
   els.tokenCount.textContent = total > 0 ? `Total: ${total}` : '';
   if(!tokens || tokens.length === 0){
@@ -191,13 +170,12 @@ function renderTokens(tokens, total){
   }
   let html = '<table><tr><th>Lexema</th><th>Token</th><th>Línea</th></tr>';
   for(const t of tokens){
-    html += `<tr><td>${escapeHtml(t.lexema)}</td><td><span class="tok-badge">${escapeHtml(t.type)}</span></td><td>${t.line}</td></tr>`;
+    html += `<tr><td>${escapeHtml(t.lexema)}</td><td><span class="tok-badge">${escapeHtml(t.type_display)}</span></td><td>${t.line}</td></tr>`;
   }
   html += '</table>';
   els.tokensBody.innerHTML = html;
 }
 
-// Tabla de símbolos, con las columnas nuevas: categoría, valor inicial, ¿se modifica?
 function renderSymbols(table){
   if(!table || table.length === 0){
     els.symbolsBody.innerHTML = '<div class="empty">No se declararon variables.</div>';
@@ -217,7 +195,6 @@ function renderSymbols(table){
   els.symbolsBody.innerHTML = html;
 }
 
-// Salida real del programa (lo que "imprimió" cada imprimir(...))
 function renderOutput(salida){
   if(!salida || salida.length === 0){
     els.outputBody.innerHTML = '<div class="empty">El programa no generó salida.</div>';
@@ -230,7 +207,6 @@ function renderOutput(salida){
   els.outputBody.innerHTML = html;
 }
 
-// Resultado final: éxito o lista de errores
 function renderResult(lexErrors, semErrors, sintaxisValida){
   const all = [...lexErrors, ...semErrors];
   if(all.length === 0 && sintaxisValida){
@@ -252,9 +228,6 @@ function escapeHtml(s){
 }
 function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
 
-// ============================================================
-// Función principal: se ejecuta al presionar "Compilar"
-// ============================================================
 async function compile(){
   const source = els.code.value;
   resetPipeline();

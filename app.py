@@ -26,16 +26,28 @@ def compilar():
     # Etapas 2, 3, 4 + ejecución
     sem_errors, symbol_table, sintaxis_valida, salida = parse_and_analyze(tokens)
 
-    tokens_out = [t for t in tokens if t['type'] != 'FIN']
+    # Quitamos el token 'FIN', y agregamos 'type_display': una versión
+    # simplificada del tipo de token, sin el ":PALABRA" pegado al final
+    # (ej. 'PALABRA_RESERVADA:DECIMAL' -> 'PALABRA_RESERVADA'), para que
+    # se vea igual que en el PDF de lineamientos.
+    tokens_out = []
+    for t in tokens:
+        if t['type'] != 'FIN':
+            tokens_out.append({
+                'lexema': t['lexema'],
+                'type': t['type'],
+                'type_display': t['type'].split(':')[0],
+                'line': t['line'],
+            })
 
     return jsonify({
         'tokens': tokens_out,
-        'total_tokens': len(tokens_out),   # <-- nuevo: total de tokens encontrados
+        'total_tokens': len(tokens_out),
         'lex_errors': lex_errors,
         'sem_errors': sem_errors,
         'symbol_table': symbol_table,
         'sintaxis_valida': sintaxis_valida,
-        'salida': salida,                  # <-- nuevo: lo que "imprimió" el programa
+        'salida': salida,
     })
 
 
